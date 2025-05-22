@@ -35,6 +35,8 @@ public class UIManager : MonoBehaviour
 
     private float waitTime = 180f; // 3 minutes
     private bool isWaiting = false;
+    private float updateInterval = 2f;
+    private Coroutine updateCoroutine;
 
     private void Start()
     {
@@ -80,7 +82,7 @@ public class UIManager : MonoBehaviour
         string username = usernameInput.text.Trim();
         if (string.IsNullOrEmpty(username))
         {
-            registrationStatus.text = "❌ Будь ласка, введіть ім'я користувача";
+            registrationStatus.text = "Будь ласка, введіть ім'я користувача";
             //errorSound.Play();
             return;
         }
@@ -97,13 +99,14 @@ public class UIManager : MonoBehaviour
         {
             if (success)
             {
-                registrationStatus.text = "✅ Реєстрація успішна!";
+                registrationStatus.text = " Реєстрація успішна!";
                 ShowWaitingScreen();
                 StartWaiting();
+                StartCoroutine(UpdatePlayerCount());
             }
             else
             {
-                registrationStatus.text = "❌ Помилка реєстрації: " + message;
+                registrationStatus.text = " Помилка реєстрації: " + message;
                 registerButton.interactable = true;
                 //errorSound.Play();
             }
@@ -132,7 +135,7 @@ public class UIManager : MonoBehaviour
 
         if (isWaiting && !GameAPIClient.Instance.IsGameStarted)
         {
-            waitingStatus.text = "❌ Недостатньо гравців. Спробуйте ще раз.";
+            waitingStatus.text = "  Недостатньо гравців. Спробуйте ще раз.";
             //waitingSound.Stop();
             //errorSound.Play();
             yield return new WaitForSeconds(3f);
@@ -151,7 +154,7 @@ public class UIManager : MonoBehaviour
     {
         if (!GameAPIClient.Instance.IsGameStarted)
         {
-             gameStatus.text = "❌ Гра ще не розпочалася!";
+             gameStatus.text = " Гра ще не розпочалася!";
              //errorSound.Play();
              return;
         }
@@ -178,7 +181,7 @@ public class UIManager : MonoBehaviour
             }
             else
             {
-                gameStatus.text = "❌ Помилка відправки ходу: " + message;
+                gameStatus.text = "  Помилка відправки ходу: " + message;
                 //errorSound.Play();
             }
         });
@@ -194,7 +197,7 @@ public class UIManager : MonoBehaviour
             }
             else
             {
-                gameStatus.text = "❌ Помилка отримання результатів.";
+                gameStatus.text = "  Помилка отримання результатів.";
                 //errorSound.Play();
             }
         });
@@ -211,5 +214,52 @@ public class UIManager : MonoBehaviour
             resultsString += $"Дрони: K:{result.kronus} L:{result.lyrion} M:{result.mystara} E:{result.eclipsia} F:{result.fiora}\n\n";
         }
         resultsText.text = resultsString;
+    }
+
+    private IEnumerator UpdatePlayerCount()
+    {
+        while (isWaiting)
+        {
+            GameAPIClient.Instance.GetPlayerCount((success, count, status) =>
+            {
+                if (success)
+                {
+                    playersCountText.text = $"Гравців: {count}/4";
+                    
+                    if (count >= 4)
+                    {
+                        waitingStatus.text = "Гра готова до початку!";
+                    }
+                    else if (status == "in_progress")
+                    {
+                        waitingStatus.text = "Гра почалася!";
+                        isWaiting = false;
+                        ShowGameScreen();
+                    }
+                    else
+                    {
+                        waitingStatus.text = "Очікування гравців...";
+                    }
+                }
+            });
+            
+            yield return new WaitForSeconds(2f);
+        }
+    }
+
+    [System.Serializable]
+    private class PlayerCountResponse
+    {
+        public bool success;
+        public string error;
+        public GameData game;
+    }
+
+    [System.Serializable]
+    private class GameData
+    {
+        public int id;
+        public string status;
+        public int player_count;
     }
 }

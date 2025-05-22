@@ -7,13 +7,14 @@ using System.Text;
 
 public class GameAPIClient : MonoBehaviour
 {
-    private const string BASE_URL = "https://068e-91-243-2-33.ngrok-free.app/GameDev/";
+    private const string BASE_URL = "https://7985-91-243-2-33.ngrok-free.app/GameDev/";
     private string playerId;
     private string gameId;
     private bool isGameStarted = false;
     private float checkInterval = 2f; // Перевіряти кожні 2 секунди
 
     public bool IsGameStarted => isGameStarted;
+    public string CurrentGameId => gameId;
 
     public static GameAPIClient Instance { get; private set; }
 
@@ -74,30 +75,44 @@ public class GameAPIClient : MonoBehaviour
         {
             try
             {
+                Debug.Log("Registration response: " + request.downloadHandler.text);
                 var response = JsonUtility.FromJson<RegisterResponse>(request.downloadHandler.text);
                 if (response.success)
                 {
                     playerId = response.player_id;
                     gameId = response.game_id;
+                    Debug.Log($"Registration successful. Player ID: {playerId}, Game ID: {gameId}");
+                    
+                    // Перевіряємо, чи game_id не пустий
+                    if (string.IsNullOrEmpty(gameId))
+                    {
+                        Debug.LogError("Game ID is empty after registration!");
+                        callback(false, "Помилка: Game ID не отримано");
+                        yield break;
+                    }
+                    
                     callback(true, "Реєстрація успішна");
                 }
                 else
                 {
+                    Debug.LogError("Registration failed: " + response.message);
                     callback(false, response.message);
                 }
             }
             catch (Exception e)
             {
+                Debug.LogError("Error parsing registration response: " + e.Message);
                 callback(false, "Помилка обробки відповіді: " + e.Message);
             }
         }
         else
         {
-            callback(false, "Помилка мережі: " + request.error);
+            Debug.LogError("Network error during registration: " + request.error);
             if (request.downloadHandler != null && !string.IsNullOrEmpty(request.downloadHandler.text))
             {
                 Debug.LogError("Server Response Body: " + request.downloadHandler.text);
             }
+            callback(false, "Помилка мережі: " + request.error);
         }
     }
 
@@ -254,10 +269,88 @@ public class GameAPIClient : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(playerId) && !string.IsNullOrEmpty(gameId))
         {
-            StartCoroutine(DisconnectCoroutine((success, message) => 
+            // Створюємо новий об'єкт для відправки запиту
+            var disconnectObject = new GameObject("DisconnectHelper");
+            var helper = disconnectObject.AddComponent<DisconnectHelper>();
+            helper.Disconnect(playerId, gameId, (success, message) => 
             {
                 Debug.Log("Відключення при закритті: " + message);
-            }));
+                Destroy(disconnectObject);
+            });
+        }
+    }
+
+    public void GetPlayerCount(Action<bool, int, string> callback)
+    {
+        StartCoroutine(GetPlayerCountCoroutine(callback));
+    }
+
+    [Serializable]
+    public class GetPlayersRequest
+    {
+        public string game_id;
+    }
+
+    private IEnumerator GetPlayerCountCoroutine(Action<bool, int, string> callback)
+    {
+        if (string.IsNullOrEmpty(gameId))
+        {
+            Debug.LogError("Game ID is not set. Current gameId: " + (gameId ?? "null"));
+            callback(false, 0, "error");
+            yield break;
+        }
+
+        Debug.Log("Getting player count for game ID: " + gameId);
+        var request = new UnityWebRequest(BASE_URL + "get_players.php", "POST");
+        
+        // Створюємо JSON об'єкт
+        var requestData = new GetPlayersRequest { game_id = gameId };
+        var jsonData = JsonUtility.ToJson(requestData);
+        Debug.Log("Sending JSON data: " + jsonData);
+        
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            try
+            {
+                Debug.Log("Get players response: " + request.downloadHandler.text);
+                var response = JsonUtility.FromJson<PlayerCountResponse>(request.downloadHandler.text);
+                if (response.success)
+                {
+                    callback(true, response.game.player_count, response.game.status);
+                    
+                    // Оновлюємо статус гри
+                    if (response.game.status == "in_progress")
+                    {
+                        isGameStarted = true;
+                    }
+                }
+                else
+                {
+                    Debug.LogError("Server error: " + (string.IsNullOrEmpty(response.error) ? "Unknown error" : response.error));
+                    callback(false, 0, "error");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Error parsing response: " + e.Message);
+                callback(false, 0, "error");
+            }
+        }
+        else
+        {
+            Debug.LogError("Network error: " + request.error);
+            if (request.downloadHandler != null && !string.IsNullOrEmpty(request.downloadHandler.text))
+            {
+                Debug.LogError("Server Response: " + request.downloadHandler.text);
+            }
+            callback(false, 0, "error");
         }
     }
 }
@@ -324,4 +417,59 @@ public class DisconnectResponse
 {
     public bool success;
     public string message;
+}
+
+[Serializable]
+public class PlayerCountResponse
+{
+    public bool success;
+    public string error;
+    public GameInfo game;
+}
+
+[Serializable]
+public class GameInfo
+{
+    public int player_count;
+    public string status;
+}
+
+// Допоміжний клас для відправки запиту на відключення
+public class DisconnectHelper : MonoBehaviour
+{
+    private const string BASE_URL = "https://7985-91-243-2-33.ngrok-free.app/GameDev/";
+
+    public void Disconnect(string playerId, string gameId, Action<bool, string> callback)
+    {
+        StartCoroutine(DisconnectCoroutine(playerId, gameId, callback));
+    }
+
+    private IEnumerator DisconnectCoroutine(string playerId, string gameId, Action<bool, string> callback)
+    {
+        var request = new UnityWebRequest(BASE_URL + "disconnect.php", "POST");
+        var jsonData = JsonUtility.ToJson(new { player_id = playerId, game_id = gameId });
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            try
+            {
+                var response = JsonUtility.FromJson<DisconnectResponse>(request.downloadHandler.text);
+                callback(response.success, response.message);
+            }
+            catch (Exception e)
+            {
+                callback(false, "Помилка обробки відповіді: " + e.Message);
+            }
+        }
+        else
+        {
+            callback(false, "Помилка мережі: " + request.error);
+        }
+    }
 } 
