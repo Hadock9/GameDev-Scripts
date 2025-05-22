@@ -161,8 +161,13 @@ public class GameAPIClient : MonoBehaviour
             fiora = fiora
         };
 
+        Debug.Log($"Submitting move for game {gameId}, player {playerId}");
+        Debug.Log($"Move data: K:{kronus} L:{lyrion} M:{mystara} E:{eclipsia} F:{fiora}");
+
         var request = new UnityWebRequest(BASE_URL + "submit_move.php", "POST");
         var jsonData = JsonUtility.ToJson(moveData);
+        Debug.Log("Sending JSON data: " + jsonData);
+        
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
@@ -172,6 +177,7 @@ public class GameAPIClient : MonoBehaviour
 
         if (request.result == UnityWebRequest.Result.Success)
         {
+            Debug.Log("Server response: " + request.downloadHandler.text);
             try
             {
                 var response = JsonUtility.FromJson<MoveResponse>(request.downloadHandler.text);
@@ -179,11 +185,17 @@ public class GameAPIClient : MonoBehaviour
             }
             catch (Exception e)
             {
+                Debug.LogError("Error parsing response: " + e.Message);
                 callback(false, "Помилка обробки відповіді: " + e.Message);
             }
         }
         else
         {
+            Debug.LogError("Network error: " + request.error);
+            if (request.downloadHandler != null && !string.IsNullOrEmpty(request.downloadHandler.text))
+            {
+                Debug.LogError("Server Response: " + request.downloadHandler.text);
+            }
             callback(false, "Помилка мережі: " + request.error);
         }
     }
@@ -195,33 +207,41 @@ public class GameAPIClient : MonoBehaviour
 
     private IEnumerator GetResultsCoroutine(Action<bool, GameResult[]> callback)
     {
+        Debug.Log($"Getting results for game {gameId}");
         var request = UnityWebRequest.Get(BASE_URL + "get_results.php?game_id=" + gameId);
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
         {
+            Debug.Log("Get results response: " + request.downloadHandler.text);
             try
             {
                 var response = JsonUtility.FromJson<ResultsResponse>(request.downloadHandler.text);
                 if (response.success)
                 {
+                    Debug.Log($"Successfully got {response.results?.Length ?? 0} results");
                     callback(true, response.results);
                 }
                 else
                 {
+                    Debug.LogError("Failed to get results: " + (response.message ?? "Unknown error"));
                     callback(false, null);
                 }
             }
             catch (Exception e)
             {
+                Debug.LogError("Error parsing results: " + e.Message);
                 callback(false, null);
-                Debug.LogError("Помилка обробки результатів: " + e.Message);
             }
         }
         else
         {
+            Debug.LogError("Network error getting results: " + request.error);
+            if (request.downloadHandler != null && !string.IsNullOrEmpty(request.downloadHandler.text))
+            {
+                Debug.LogError("Server Response: " + request.downloadHandler.text);
+            }
             callback(false, null);
-            Debug.LogError("Помилка мережі: " + request.error);
         }
     }
 
