@@ -7,7 +7,7 @@ using System.Text;
 
 public class GameAPIClient : MonoBehaviour
 {
-    private const string BASE_URL = "https://7c36-91-243-2-33.ngrok-free.app/GameDev/";
+    private const string BASE_URL = "https://068e-91-243-2-33.ngrok-free.app/GameDev/";
     private string playerId;
     private string gameId;
     private bool isGameStarted = false;
@@ -47,6 +47,12 @@ public class GameAPIClient : MonoBehaviour
         }
     }
 
+    [Serializable]
+    private class RegisterData
+    {
+        public string username;
+    }
+
     public void RegisterPlayer(string username, Action<bool, string> callback)
     {
         StartCoroutine(RegisterPlayerCoroutine(username, callback));
@@ -55,7 +61,8 @@ public class GameAPIClient : MonoBehaviour
     private IEnumerator RegisterPlayerCoroutine(string username, Action<bool, string> callback)
     {
         var request = new UnityWebRequest(BASE_URL + "register.php", "POST");
-        var jsonData = JsonUtility.ToJson(new { username = username });
+        var registrationData = new RegisterData { username = username };
+        var jsonData = JsonUtility.ToJson(registrationData);
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
@@ -87,6 +94,10 @@ public class GameAPIClient : MonoBehaviour
         else
         {
             callback(false, "Помилка мережі: " + request.error);
+            if (request.downloadHandler != null && !string.IsNullOrEmpty(request.downloadHandler.text))
+            {
+                Debug.LogError("Server Response Body: " + request.downloadHandler.text);
+            }
         }
     }
 

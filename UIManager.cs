@@ -28,10 +28,10 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI resultsText;
 
     [Header("Audio")]
-    public AudioSource waitingSound;
-    public AudioSource gameStartSound;
-    public AudioSource submitSound;
-    public AudioSource errorSound;
+    //public AudioSource waitingSound;
+    //public AudioSource gameStartSound;
+    //public AudioSource submitSound;
+    //public AudioSource errorSound;
 
     private float waitTime = 180f; // 3 minutes
     private bool isWaiting = false;
@@ -81,19 +81,19 @@ public class UIManager : MonoBehaviour
         if (string.IsNullOrEmpty(username))
         {
             registrationStatus.text = "❌ Будь ласка, введіть ім'я користувача";
-            errorSound.Play();
+            //errorSound.Play();
             return;
         }
 
-        StartCoroutine(RegisterPlayer(username));
+        RegisterPlayer(username);
     }
 
-    private IEnumerator RegisterPlayer(string username)
+    private void RegisterPlayer(string username)
     {
         registrationStatus.text = "⏳ Реєстрація...";
         registerButton.interactable = false;
 
-        yield return StartCoroutine(GameAPIClient.Instance.RegisterPlayer(username, (success, message) =>
+        GameAPIClient.Instance.RegisterPlayer(username, (success, message) =>
         {
             if (success)
             {
@@ -105,15 +105,15 @@ public class UIManager : MonoBehaviour
             {
                 registrationStatus.text = "❌ Помилка реєстрації: " + message;
                 registerButton.interactable = true;
-                errorSound.Play();
+                //errorSound.Play();
             }
-        }));
+        });
     }
 
     private void StartWaiting()
     {
         isWaiting = true;
-        waitingSound.Play();
+        //waitingSound.Play();
         StartCoroutine(UpdateTimer());
     }
 
@@ -133,16 +133,16 @@ public class UIManager : MonoBehaviour
         if (isWaiting && !GameAPIClient.Instance.IsGameStarted)
         {
             waitingStatus.text = "❌ Недостатньо гравців. Спробуйте ще раз.";
-            waitingSound.Stop();
-            errorSound.Play();
+            //waitingSound.Stop();
+            //errorSound.Play();
             yield return new WaitForSeconds(3f);
             ShowRegistrationScreen();
         }
         else if (GameAPIClient.Instance.IsGameStarted && isWaiting)
         {
              isWaiting = false;
-             waitingSound.Stop();
-             gameStartSound.Play();
+             //waitingSound.Stop();
+             //gameStartSound.Play();
              ShowGameScreen();
         }
     }
@@ -152,41 +152,41 @@ public class UIManager : MonoBehaviour
         if (!GameAPIClient.Instance.IsGameStarted)
         {
              gameStatus.text = "❌ Гра ще не розпочалася!";
-             errorSound.Play();
+             //errorSound.Play();
              return;
         }
 
         if (!droneManager.ValidateStats())
         {
-            errorSound.Play();
+            //errorSound.Play();
             return;
         }
 
-        submitSound.Play();
-        StartCoroutine(SubmitMove());
+        //submitSound.Play();
+        SubmitMove();
     }
 
-    private IEnumerator SubmitMove()
+    private void SubmitMove()
     {
         var (kronus, lyrion, mystara, eclipsia, fiora) = droneManager.GetDroneDistribution();
         
-        yield return StartCoroutine(GameAPIClient.Instance.SubmitMove(kronus, lyrion, mystara, eclipsia, fiora, (success, message) =>
+        GameAPIClient.Instance.SubmitMove(kronus, lyrion, mystara, eclipsia, fiora, (success, message) =>
         {
             if (success)
             {
-                StartCoroutine(GetResults());
+                GetResults();
             }
             else
             {
                 gameStatus.text = "❌ Помилка відправки ходу: " + message;
-                errorSound.Play();
+                //errorSound.Play();
             }
-        }));
+        });
     }
 
-    private IEnumerator GetResults()
+    private void GetResults()
     {
-        yield return StartCoroutine(GameAPIClient.Instance.GetResults((success, results) =>
+        GameAPIClient.Instance.GetResults((success, results) =>
         {
             if (success && results != null)
             {
@@ -195,9 +195,9 @@ public class UIManager : MonoBehaviour
             else
             {
                 gameStatus.text = "❌ Помилка отримання результатів.";
-                errorSound.Play();
+                //errorSound.Play();
             }
-        }));
+        });
     }
 
     private void ShowResults(GameResult[] results)
