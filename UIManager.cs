@@ -17,6 +17,7 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI timerText;
     public TextMeshProUGUI playersCountText;
     public TextMeshProUGUI waitingStatus;
+    public TextMeshProUGUI gameIdText;
 
     [Header("Game Screen")]
     public GameObject gamePanel;
@@ -29,10 +30,10 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI resultsText;
 
     [Header("Audio")]
-    //public AudioSource waitingSound;
-    //public AudioSource gameStartSound;
-    //public AudioSource submitSound;
-    //public AudioSource errorSound;
+    public AudioSource waitingSound;
+    public AudioSource gameStartSound;
+    public AudioSource submitSound;
+    public AudioSource errorSound;
 
     private float waitTime = 180f; // 3 minutes
     private bool isWaiting = false;
@@ -84,7 +85,7 @@ public class UIManager : MonoBehaviour
         if (string.IsNullOrEmpty(username))
         {
             registrationStatus.text = "Будь ласка, введіть ім'я користувача";
-            //errorSound.Play();
+            if (errorSound != null) errorSound.Play();
             return;
         }
 
@@ -102,6 +103,7 @@ public class UIManager : MonoBehaviour
             {
                 registrationStatus.text = "Реєстрація успішна!";
                 ShowWaitingScreen();
+                gameIdText.text = $"ID гри: {GameAPIClient.Instance.CurrentGameId}";
                 StartWaiting();
                 StartCoroutine(UpdatePlayerCount());
             }
@@ -109,7 +111,7 @@ public class UIManager : MonoBehaviour
             {
                 registrationStatus.text = "Помилка реєстрації: " + message;
                 registerButton.interactable = true;
-                //errorSound.Play();
+                if (errorSound != null) errorSound.Play();
             }
         });
     }
@@ -117,7 +119,7 @@ public class UIManager : MonoBehaviour
     private void StartWaiting()
     {
         isWaiting = true;
-        //waitingSound.Play();
+        if (waitingSound != null) waitingSound.Play();
         StartCoroutine(UpdateTimer());
     }
 
@@ -164,6 +166,8 @@ public class UIManager : MonoBehaviour
             {
                 waitingStatus.text = "Гра починається!";
                 isWaiting = false;
+                if (waitingSound != null && waitingSound.isPlaying) waitingSound.Stop();
+                if (gameStartSound != null) gameStartSound.Play();
                 ShowGameScreen();
             }
             else
@@ -191,6 +195,7 @@ public class UIManager : MonoBehaviour
         }
 
         gameStatus.text = "Відправка ходу...";
+        if (submitSound != null) submitSound.Play();
         SubmitMove();
     }
 
@@ -205,6 +210,19 @@ public class UIManager : MonoBehaviour
             {
                 gameStatus.text = "Хід успішно відправлено! Очікування інших гравців...";
                 Debug.Log("Move submitted successfully");
+                
+                // Отримуємо посилання на планети
+                var planetRects = droneManager.GetPlanetRects();
+                if (planetRects != null && planetRects.Count > 0)
+                {
+                    // Запускаємо спавн дронів
+                    droneManager.SpawnDronesForAllPlanets(planetRects);
+                }
+                else
+                {
+                    Debug.LogError("Не вдалося отримати посилання на планети");
+                }
+                
                 StartCoroutine(PollForResults());
             }
             else
@@ -282,7 +300,7 @@ public class UIManager : MonoBehaviour
                 resultsString += $"Бали: {teamScores[i]}\n";
                 if (teamScores[i] == maxScore)
                 {
-                    resultsString += "Переможець раунду!\n";
+                    resultsString += "🏆 Переможець раунду!\n";
                 }
                 resultsString += "\n";
             }
@@ -294,6 +312,7 @@ public class UIManager : MonoBehaviour
         {
             Debug.LogError("Error displaying results: " + e.Message);
             gameStatus.text = "Помилка відображення результатів";
+            if (errorSound != null) errorSound.Play();
         }
     }
 
