@@ -100,14 +100,14 @@ public class DroneManager : MonoBehaviour
             !IsValidInput(eclipsiaInput.text, out int eclipsia) ||
             !IsValidInput(fioraInput.text, out int fiora))
         {
-            errorText.text = "❌ Введіть лише числа від 0 до 1000.";
+            errorText.text = "  Введіть лише числа від 0 до 1000.";
             return false;
         }
 
         // Перевірка порядку
         if (!(kronus >= lyrion && lyrion >= mystara && mystara >= eclipsia && eclipsia >= fiora))
         {
-            errorText.text = "❌ Порушено порядок: Kronus ≥ Lyrion ≥ Mystara ≥ Eclipsia ≥ Fiora.";
+            errorText.text = "  Порушено порядок: Kronus ≥ Lyrion ≥ Mystara ≥ Eclipsia ≥ Fiora.";
             return false;
         }
 
@@ -115,12 +115,12 @@ public class DroneManager : MonoBehaviour
         int total = kronus + lyrion + mystara + eclipsia + fiora;
         if (total != MAX_DRONES)
         {
-            errorText.text = $"❌ Сума має бути {MAX_DRONES}. Зараз: {total}.";
+            errorText.text = $" Сума має бути {MAX_DRONES}. Зараз: {total}.";
             return false;
         }
 
         // Успіх
-        errorText.text = "✅ Усі умови виконано!";
+        errorText.text = "  Усі умови виконано!";
         return true;
     }
 
@@ -177,17 +177,17 @@ public class DroneManager : MonoBehaviour
     private IEnumerator SpawnDronesForPlanet(RectTransform planetRect, int droneCount)
     {
         Vector2 planetPosition = planetRect.anchoredPosition;
-        float spawnRadius = 500f; // Збільшений радіус спавну
+        float spawnRadius = 300f; // Радіус спавну дронів навколо планет
         
         for (int i = 0; i < droneCount; i++)
         {
             // Генеруємо випадкову позицію навколо планети
-            float randomAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float randomDistance = Random.Range(0f, spawnRadius);
+            float randomAngle = Random.Range(0f, 360f);
+            float randomDistance = Random.Range(50f, spawnRadius); // Мінімальна відстань 50f
             
             Vector2 spawnPosition = new Vector2(
-                planetPosition.x + Mathf.Cos(randomAngle) * randomDistance,
-                planetPosition.y + Mathf.Sin(randomAngle) * randomDistance
+                planetPosition.x + Mathf.Cos(randomAngle * Mathf.Deg2Rad) * randomDistance,
+                planetPosition.y + Mathf.Sin(randomAngle * Mathf.Deg2Rad) * randomDistance
             );
             
             // Створюємо дрон
