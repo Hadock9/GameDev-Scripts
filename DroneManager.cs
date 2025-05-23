@@ -177,17 +177,16 @@ public class DroneManager : MonoBehaviour
     private IEnumerator SpawnDronesForPlanet(RectTransform planetRect, int droneCount)
     {
         Vector2 planetPosition = planetRect.anchoredPosition;
-        float spawnRadius = 300f; // Радіус спавну дронів навколо планет
         
         for (int i = 0; i < droneCount; i++)
         {
-            // Генеруємо випадкову позицію навколо планети
-            float randomAngle = Random.Range(0f, 360f);
-            float randomDistance = Random.Range(50f, spawnRadius); // Мінімальна відстань 50f
-            
+            // Генеруємо випадкову позицію в межах 50x50 пікселів на планеті
+            float randomOffsetX = Random.Range(-25f, 25f);
+            float randomOffsetY = Random.Range(-25f, 25f);
+
             Vector2 spawnPosition = new Vector2(
-                planetPosition.x + Mathf.Cos(randomAngle * Mathf.Deg2Rad) * randomDistance,
-                planetPosition.y + Mathf.Sin(randomAngle * Mathf.Deg2Rad) * randomDistance
+                planetPosition.x + randomOffsetX,
+                planetPosition.y + randomOffsetY
             );
             
             // Створюємо дрон

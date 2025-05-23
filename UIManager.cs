@@ -292,15 +292,34 @@ public class UIManager : MonoBehaviour
                 maxScore = Math.Max(maxScore, score);
             }
             
+            // Перевірка на нічию
+            int winnersCount = 0;
+            foreach (int score in teamScores)
+            {
+                if (score == maxScore) winnersCount++;
+            }
+
+            bool isDraw = winnersCount > 1;
+
+            if (isDraw)
+            {
+                resultsString += "🤝 Нічия!\n\n";
+            }
+            else if (winnersCount == 1)
+            {
+                 resultsString += " Переможець раунду!\n\n";
+            }
+            
             // Виводимо результати
             for (int i = 0; i < results.Length; i++)
             {
                 resultsString += $"Команда {i + 1}: {results[i].username}\n";
                 resultsString += $"Дрони: K:{results[i].kronus} L:{results[i].lyrion} M:{results[i].mystara} E:{results[i].eclipsia} F:{results[i].fiora}\n";
                 resultsString += $"Бали: {teamScores[i]}\n";
-                if (teamScores[i] == maxScore)
+                // Додаємо позначку переможця лише якщо це не нічия і цей гравець має максимальний бал
+                if (!isDraw && teamScores[i] == maxScore)
                 {
-                    resultsString += "🏆 Переможець раунду!\n";
+                    resultsString += "\n";
                 }
                 resultsString += "\n";
             }
@@ -372,7 +391,7 @@ public class UIManager : MonoBehaviour
             {
                 if (success)
                 {
-                    playersCountText.text = $"Гравців: {count}/4";
+                    playersCountText.text = $"Гравців: {count}";
                     
                     if (count >= 2)
                     {
