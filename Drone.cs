@@ -5,10 +5,6 @@ public class Drone : MonoBehaviour
 {
     private RectTransform rectTransform;
     private Vector2 targetPosition;
-    private float speed = 500f; // Збільшена швидкість руху
-    private float rotationSpeed = 720f; // Збільшена швидкість обертання
-    private bool isMoving = true;
-    private float arrivalThreshold = 5f; // Поріг прибуття до цілі
 
     private void Awake()
     {

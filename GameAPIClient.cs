@@ -59,6 +59,66 @@ public class GameAPIClient : MonoBehaviour
         StartCoroutine(RegisterPlayerCoroutine(username, callback));
     }
 
+    public void JoinGame(string username, string gameId, Action<bool, string> callback)
+    {
+        StartCoroutine(JoinGameCoroutine(username, gameId, callback));
+    }
+
+    private IEnumerator JoinGameCoroutine(string username, string gameId, Action<bool, string> callback)
+    {
+        var request = new UnityWebRequest(BASE_URL + "join_game.php", "POST");
+        var joinData = new JoinGameData { username = username, game_id = gameId };
+        var jsonData = JsonUtility.ToJson(joinData);
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            try
+            {
+                Debug.Log("Join game response: " + request.downloadHandler.text);
+                var response = JsonUtility.FromJson<RegisterResponse>(request.downloadHandler.text);
+                if (response.success)
+                {
+                    playerId = response.player_id;
+                    this.gameId = gameId;
+                    Debug.Log($"Join game successful. Player ID: {playerId}, Game ID: {gameId}");
+                    callback(true, "Приєднання успішне");
+                }
+                else
+                {
+                    Debug.LogError("Join game failed: " + response.message);
+                    callback(false, response.message);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Error parsing join game response: " + e.Message);
+                callback(false, "Помилка обробки відповіді: " + e.Message);
+            }
+        }
+        else
+        {
+            Debug.LogError("Network error during join game: " + request.error);
+            if (request.downloadHandler != null && !string.IsNullOrEmpty(request.downloadHandler.text))
+            {
+                Debug.LogError("Server Response Body: " + request.downloadHandler.text);
+            }
+            callback(false, "Помилка мережі: " + request.error);
+        }
+    }
+
+    [Serializable]
+    private class JoinGameData
+    {
+        public string username;
+        public string game_id;
+    }
+
     private IEnumerator RegisterPlayerCoroutine(string username, Action<bool, string> callback)
     {
         var request = new UnityWebRequest(BASE_URL + "register.php", "POST");

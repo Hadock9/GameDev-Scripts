@@ -209,7 +209,7 @@ public class DroneManager : MonoBehaviour
 
     public void ClearAllDrones()
     {
-        foreach (Drone drone in activeDrones)
+        foreach (var drone in activeDrones)
         {
             if (drone != null)
             {
@@ -217,5 +217,27 @@ public class DroneManager : MonoBehaviour
             }
         }
         activeDrones.Clear();
+    }
+
+    public void ResetDrones()
+    {
+        // Clear all active drones
+        ClearAllDrones();
+        
+        // Reset input fields to initial values
+        kronusInput.text = "200";
+        lyrionInput.text = "200";
+        mystaraInput.text = "200";
+        eclipsiaInput.text = "200";
+        fioraInput.text = "200";
+        
+        // Update the total drones display
+        UpdateTotalDrones();
+        
+        // Clear any error messages
+        if (errorText != null)
+        {
+            errorText.text = "";
+        }
     }
 } 

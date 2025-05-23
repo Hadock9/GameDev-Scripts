@@ -9,6 +9,7 @@ public class UIManager : MonoBehaviour
     [Header("Registration Screen")]
     public GameObject registrationPanel;
     public TMP_InputField usernameInput;
+    public TMP_InputField gameIdInput;
     public Button registerButton;
     public TextMeshProUGUI registrationStatus;
 
@@ -82,6 +83,8 @@ public class UIManager : MonoBehaviour
     private void OnRegisterClick()
     {
         string username = usernameInput.text.Trim();
+        string gameId = gameIdInput.text.Trim();
+
         if (string.IsNullOrEmpty(username))
         {
             registrationStatus.text = "Будь ласка, введіть ім'я користувача";
@@ -89,7 +92,35 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        RegisterPlayer(username);
+        registerButton.interactable = false;
+        registrationStatus.text = "Обробка...";
+
+        if (!string.IsNullOrEmpty(gameId))
+        {
+            // Attempt to join existing game
+            GameAPIClient.Instance.JoinGame(username, gameId, (success, message) =>
+            {
+                if (success)
+                {
+                    registrationStatus.text = "Приєднання успішне!";
+                    ShowWaitingScreen();
+                    gameIdText.text = $"ID гри: {GameAPIClient.Instance.CurrentGameId}"; // Assuming JoinGame updates CurrentGameId
+                    StartWaiting();
+                    StartCoroutine(UpdatePlayerCount());
+                }
+                else
+                {
+                    registrationStatus.text = "Помилка приєднання: " + message;
+                    registerButton.interactable = true;
+                    if (errorSound != null) errorSound.Play();
+                }
+            });
+        }
+        else
+        {
+            // Create a new game
+            RegisterPlayer(username);
+        }
     }
 
     private void RegisterPlayer(string username)
@@ -324,8 +355,12 @@ public class UIManager : MonoBehaviour
                 resultsString += "\n";
             }
             
+            resultsString += "\n";
             resultsText.text = resultsString;
             Debug.Log("Results displayed successfully");
+
+            // Запускаємо корутину для перезапуску гри через 10 секунд
+            // StartCoroutine(RestartGameAfterDelay());
         }
         catch (Exception e)
         {
