@@ -7,7 +7,7 @@ using System.Text;
 
 public class GameAPIClient : MonoBehaviour
 {
-    private const string BASE_URL = "https://7985-91-243-2-33.ngrok-free.app/GameDev/";
+    private const string BASE_URL = "https://3548-178-133-64-61.ngrok-free.app/GameDev/";
     private string playerId;
     private string gameId;
     private bool isGameStarted = false;
